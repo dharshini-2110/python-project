@@ -1,102 +1,89 @@
-import tkinter as tk
-from tkinter import messagebox
+import streamlit as st
 import random
 import time
 
-class TypingGame:
-    def __init__(self, master):
-        self.master = master
-        master.title("Typing Speed Test")
-        master.geometry("800x500")
-        master.config(bg="#ADD8E6")  
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Typing Speed Test", page_icon="⌨️", layout="centered")
 
-        self.words = ["python", "tkinter", "programming", "challenge", "keyboard", 
-                      "application", "interface", "developer", "coding", "accuracy"]
-        self.current_word = ""
-        self.score = 0
-        self.time_left = 60  
-        self.game_started = False
-
-    
-        self.title_label = tk.Label(master, text="Typing Speed Test", font=("Arial", 30, "bold"), bg="#ADD8E6")
-        self.title_label.pack(pady=20)
-
-        self.word_label = tk.Label(master, text="", font=("Arial", 28), bg="#ADD8E6")
-        self.word_label.pack(pady=20)
-
-        self.entry_box = tk.Entry(master, font=("Arial", 24), width=30, justify="center")
-        self.entry_box.pack(pady=10)
-        self.entry_box.bind("<Return>", self.check_word) 
-
-        self.score_label = tk.Label(master, text=f"Score: {self.score}", font=("Arial", 20), bg="#ADD8E6")
-        self.score_label.pack(pady=5)
-
-        self.timer_label = tk.Label(master, text=f"Time: {self.time_left}", font=("Arial", 20), bg="#ADD8E6")
-        self.timer_label.pack(pady=5)
-
-        self.start_button = tk.Button(master, text="Start Game", font=("Arial", 18), command=self.start_game)
-        self.start_button.pack(pady=20)
-
-        self.reset_button = tk.Button(master, text="Reset Game", font=("Arial", 18), command=self.reset_game, state=tk.DISABLED)
-        self.reset_button.pack(pady=10)
-
-    def start_game(self):
-        if not self.game_started:
-            self.game_started = True
-            self.score = 0
-            self.time_left = 60
-            self.score_label.config(text=f"Score: {self.score}")
-            self.timer_label.config(text=f"Time: {self.time_left}")
-            self.entry_box.config(state=tk.NORMAL)
-            self.entry_box.focus_set()
-            self.start_button.config(state=tk.DISABLED)
-            self.reset_button.config(state=tk.NORMAL)
-            self.next_word()
-            self.countdown()
-
-    def next_word(self):
-        self.current_word = random.choice(self.words)
-        self.word_label.config(text=self.current_word)
-        self.entry_box.delete(0, tk.END)
-
-    def check_word(self, event=None):
-        if self.game_started:
-            typed_word = self.entry_box.get().strip()
-            if typed_word == self.current_word:
-                self.score += 1
-                self.score_label.config(text=f"Score: {self.score}")
-            self.next_word()
-
-    def countdown(self):
-        if self.time_left > 0 and self.game_started:
-            self.time_left -= 1
-            self.timer_label.config(text=f"Time: {self.time_left}")
-            self.master.after(1000, self.countdown)
-        elif self.game_started:
-            self.end_game()
-
-    def end_game(self):
-        self.game_started = False
-        self.word_label.config(text="Game Over!")
-        self.entry_box.config(state=tk.DISABLED)
-        self.start_button.config(state=tk.NORMAL)
-        self.reset_button.config(state=tk.DISABLED)
-        tk.messagebox.showinfo("Game Over", f"Your final score is: {self.score}")
-
-    def reset_game(self):
-        self.game_started = False
-        self.score = 0
-        self.time_left = 60
-        self.score_label.config(text=f"Score: {self.score}")
-        self.timer_label.config(text=f"Time: {self.time_left}")
-        self.word_label.config(text="")
-        self.entry_box.delete(0, tk.END)
-        self.entry_box.config(state=tk.NORMAL)
-        self.start_button.config(state=tk.NORMAL)
-        self.reset_button.config(state=tk.DISABLED)
+# --- INITIAL SESSION STATE ---
+if "words" not in st.session_state:
+    st.session_state.words = [
+        "python", "streamlit", "programming", "challenge", "keyboard",
+        "application", "interface", "developer", "coding", "accuracy"
+    ]
+if "current_word" not in st.session_state:
+    st.session_state.current_word = ""
+if "score" not in st.session_state:
+    st.session_state.score = 0
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+if "time_left" not in st.session_state:
+    st.session_state.time_left = 60
+if "game_started" not in st.session_state:
+    st.session_state.game_started = False
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = TypingGame(root)
-    root.mainloop()
+# --- HELPER FUNCTIONS ---
+def start_game():
+    st.session_state.game_started = True
+    st.session_state.score = 0
+    st.session_state.time_left = 60
+    st.session_state.start_time = time.time()
+    next_word()
+
+def next_word():
+    st.session_state.current_word = random.choice(st.session_state.words)
+
+def reset_game():
+    st.session_state.game_started = False
+    st.session_state.score = 0
+    st.session_state.time_left = 60
+    st.session_state.current_word = ""
+    st.session_state.start_time = None
+
+def update_timer():
+    if st.session_state.start_time:
+        elapsed = int(time.time() - st.session_state.start_time)
+        st.session_state.time_left = max(60 - elapsed, 0)
+        if st.session_state.time_left == 0:
+            st.session_state.game_started = False
+
+
+# --- UI ELEMENTS ---
+st.title("⌨️ Typing Speed Test")
+st.write("Type the word shown below as fast as you can. You have **60 seconds!**")
+
+# --- START AND RESET BUTTONS ---
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("▶️ Start Game"):
+        start_game()
+with col2:
+    if st.button("🔄 Reset"):
+        reset_game()
+
+# --- GAME AREA ---
+update_timer()
+
+if st.session_state.game_started:
+    st.subheader(f"⏱️ Time Left: {st.session_state.time_left} seconds")
+    st.subheader(f"🏆 Score: {st.session_state.score}")
+
+    st.markdown(f"## **{st.session_state.current_word}**")
+
+    typed_word = st.text_input("Type the word here:", key=f"input_{st.session_state.score}")
+
+    if typed_word.strip().lower() == st.session_state.current_word.lower():
+        st.session_state.score += 1
+        next_word()
+        st.rerun()  # ✅ Modern rerun function
+
+    if st.session_state.time_left <= 0:
+        st.session_state.game_started = False
+        st.rerun()
+
+else:
+    if st.session_state.start_time:
+        st.markdown("### 🏁 Game Over!")
+        st.write(f"**Your final score:** {st.session_state.score}")
+        st.balloons()
